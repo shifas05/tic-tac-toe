@@ -82,7 +82,7 @@ body {
 }
 .game {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
 }
 
 .game-info {
@@ -91,4 +91,16 @@ body {
 
 .winning-square {
   background-color: yellow;
+}
+
+.game-board {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.reset-btn {
+  width: 55px;
+  padding: 5px;
+}
+.btn-set {
+  display: flex;
 }

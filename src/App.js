@@ -9,35 +9,22 @@ function Square({value, onSquareClick, isWinner}) {
     );
 }
 
-function Board({clickable, squares, onPlay, moves, winner, time, loser, data}) {
+function Board({squares, onPlay, winner}) {
 
     function handleClick(i) {
-        if(clickable) {
+        if(!winner) {
             const nextSquares = squares.slice();
-            nextSquares[i] = data[i];
-            onPlay(nextSquares, i);
+            onPlay(nextSquares, i)
         }
     }
 
-    let status = '';
-    if (winner) {
-        status = 'Congrats 🎉🥳';
-    }
-
-    if (loser) {
-        status = 'Your time is over 😔';
-    }
-
-
     return (
         <>
-            <div><b>Moves:</b>&nbsp;{moves}</div><div><b>Time remaining:</b> {time}</div>
-            <br/>
-            {[0, 1, 2, 3].map(row => {
+            {[0, 1, 2].map(row => {
                 return (
                     <div className="board-row" key={row}>
-                        {[0, 1, 2, 3].map(col => {
-                            const i = row * 4 + col;
+                        {[0, 1, 2].map(col => {
+                            const i = row * 3 + col;
                             return (
                                 <Square
                                     key={i}
@@ -49,130 +36,116 @@ function Board({clickable, squares, onPlay, moves, winner, time, loser, data}) {
                     </div>
                 );
             })}
-            <br/>
-            <div>{status}</div>
-            <br/>
         </>
     );
 }
 
 export default function Game() {
-    const [history, setHistory] = useState(Array(16).fill(null));
-    const [prevId, setPrevId] = useState(null);
-    const [prevValue, setPrevValue] = useState(null);
-    const [prevClicked, setPrevClicked] = useState(false);
-    const [clickable, setClickable] = useState(true);
-    const [matches, setMatches] = useState([]);
-    const [moves, setMoves] = useState(0);
+    const [history, setHistory] = useState(generateNumbers());
+    const [time, setTime] = useState(0);
     const [winner, setWinner] = useState(false);
-    const [loser, setLoser] = useState(false);
-    const [time, setTime] = useState(31);
-    const [data, setData] = useState(generateNumbers());
-
+    const [moves, setMoves] = useState(0);
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setTime(prevTime => {
-                if (prevTime === 1 && !winner) {
-                    setLoser(true);
-                    setClickable(false);
-                    clearInterval(interval);
-                }
-                if (winner) {
-                    clearInterval(interval);
-                    setClickable(false);
-                }
-                return prevTime - 1
-            });
+            setTime(prevTime => prevTime + 1);
         }, 1000);
 
         if(winner) {
             clearInterval(interval);
-            setClickable(false);
-        }
-
-        if ((time+1) === 0) {
-            clearInterval(interval);
-            setClickable(false);
-            setLoser(true);
         }
 
         return () => clearInterval(interval);
-    }, [time]);
+    }, [time])
 
     function handlePlay(nextSquares, index) {
-        const clickableValue = false;
-        setClickable(clickableValue);
 
-        if (!prevClicked) {
-            setHistory(nextSquares);
-            setPrevId(index);
-            setPrevValue(nextSquares[index]);
-            setPrevClicked(true);
-            setClickable(true);
-        } else {
+        const row = Math.floor(index/3);
+        const col = index % 3;
+
+        if(isOrderedArray(nextSquares)) {
+            setWinner(true);
+        }
+
+        // Check if square above is adjacent to null
+        if(row > 0 && nextSquares[index - 3] === null) {
+            nextSquares[index - 3] = nextSquares[index];
+            nextSquares[index] = null;
+            setHistory(nextSquares)
             setMoves(moves + 1);
-            if (nextSquares[index] === prevValue && index !== prevId) {
-                const match = [...matches, [index, nextSquares[index]], [prevId, nextSquares[prevId]]];
-                if(match.length === 16) {
-                    setWinner(true);
-                }
-                setMatches(match)
-                setHistory(nextSquares);
-                setClickable(true);
-            } else {
-                setHistory(nextSquares);
-                setTimeout(() => {
-                    const newBoard2 = Array(16).fill(null);
-                    matches.forEach((val, idx) => {
-                        newBoard2[val[0]] = val[1];
-                    });
-                    setHistory(newBoard2);
-                    setClickable(true);
-                }, 1000);
-            }
-            setPrevClicked(false);
+        }
+
+        // Check if square below is adjacent to null
+        if(row < 2 && nextSquares[index + 3] === null) {
+            nextSquares[index + 3] = nextSquares[index];
+            nextSquares[index] = null;
+            setHistory(nextSquares)
+            setMoves(moves + 1);
+        }
+
+        // Check if square to the left is adjacent to null
+        if (col > 0 && nextSquares[index - 1] === null) {
+            nextSquares[index - 1] = nextSquares[index];
+            nextSquares[index] = null;
+            setHistory(nextSquares)
+            setMoves(moves + 1);
+        }
+
+        // Check if square to the right is adjacent to null
+        if (col < 2 && nextSquares[index + 1] === null) {
+            nextSquares[index + 1] = nextSquares[index];
+            nextSquares[index] = null;
+            setHistory(nextSquares)
+            setMoves(moves + 1);
         }
     }
 
     function onReset() {
-        setHistory(Array(16).fill(null));
-        setData(generateNumbers());
-        setPrevId(null);
-        setPrevValue(null);
-        setPrevClicked(false);
-        setClickable(true);
-        setMatches([]);
-        setMoves(0);
-        setTime(31);
+        setHistory(generateNumbers());
+        setTime(0);
         setWinner(false);
-        setLoser(false);
+        setMoves(0);
+    }
+
+    let winnerMessage = '';
+    if(winner) {
+        winnerMessage = 'Congrats 🎉🥳';
     }
 
     return (
         <div className="game">
+            <div><b>Time elapsed :</b> {time}</div>
             <div className="game-board">
                 <Board
-                    clickable={clickable}
                     squares={history}
-                    onPlay={handlePlay}
-                    moves={moves}
                     winner={winner}
-                    time={time}
-                    loser={loser}
-                    data={data}
+                    onPlay={handlePlay}
                 />
-                <button onClick={onReset}>RESET</button>
+            </div>
+            <div><b>Moves :</b> {moves}</div>
+            <div>{winnerMessage}</div>
+            <div className="btn-set">
+                <button className="reset-btn" onClick={onReset}>Reset</button>
             </div>
         </div>
     );
 }
 
 function generateNumbers() {
-    const numbers = [];
-    for (let i = 1; i <= 8; i++) {
-        numbers.push(i);
-        numbers.push(i);
+    const arr = Array(9).fill(null);
+    for (let i=1; i<=8; i++) {
+        arr[i] = i;
     }
-    return numbers.sort(() => Math.random() - 0.5);
+    return arr.sort(() => Math.random() - 0.5);
+}
+
+function isOrderedArray(array) {
+    const arr = array.slice();
+    arr[arr.indexOf(null)] = 9;
+    for (let i = 1; i < arr.length; i++) {
+        if (arr[i] < arr[i-1]) {
+            return false;
+        }
+    }
+    return true;
 }
